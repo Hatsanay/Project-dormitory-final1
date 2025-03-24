@@ -73,7 +73,7 @@ export default [
     {
       component: 'CNavTitle',
       name: 'จัดการใบสั่งซื้อ',
-      permission_index: 41, 
+      permission_index: [41,44,47], 
     },
     {
       component: 'CNavItem',

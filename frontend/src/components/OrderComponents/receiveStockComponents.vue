@@ -9,7 +9,7 @@
           href="#"
         >
           <i class="fa-solid fa-cart-plus"></i>
-          ใบสั่งซื้อ
+          รับวัสดุเข้าคลัง
         </a>
       </li>
       <!-- <li class="nav-item">

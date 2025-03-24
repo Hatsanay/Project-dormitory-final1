@@ -2,7 +2,6 @@ const db = require("../config/db");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 
-
 const getUserByIdfromOrder = async (req, res) => {
   try {
     const userId = req.query.id;
@@ -56,12 +55,6 @@ const AutoIDorder = async () => {
     throw new Error("เกิดข้อผิดพลาดในการดำเนินการ"); // ส่ง error กลับไปที่ createOrder
   }
 };
-
-
-
-
-
-
 
 const createOrder = async (req, res) => {
   try {
@@ -117,34 +110,34 @@ const createOrder = async (req, res) => {
       // ตรวจสอบว่า unit เป็น NULL หรือไม่
       // หาก unitname เป็น NULL หรือ undefined ให้ใช้ค่าว่าง
       // ตรวจสอบว่า unit เป็น NULL หรือไม่
-const unit = item.unit && item.unit.trim() !== "" ? item.unit : ""; // ถ้า unitname เป็น null หรือว่างให้เป็น ""
+      const unit = item.unit && item.unit.trim() !== "" ? item.unit : ""; // ถ้า unitname เป็น null หรือว่างให้เป็น ""
 
-console.log('Before Insert:');
-console.log('Order List Stock ID:', orderlist_stock_ID); // แสดงค่า orderlist_stock_ID
-console.log('Unit:', unit); // แสดงค่า unit
-console.log('Stock Name:', item.stockname); // แสดงค่า stockname
-console.log('Quantity:', item.quantity); // แสดงค่า quantity
-console.log('Price:', item.price); // แสดงค่า price
-console.log('Total Price:', item.totalprice); // แสดงค่า totalprice
+      console.log("Before Insert:");
+      console.log("Order List Stock ID:", orderlist_stock_ID); // แสดงค่า orderlist_stock_ID
+      console.log("Unit:", unit); // แสดงค่า unit
+      console.log("Stock Name:", item.stockname); // แสดงค่า stockname
+      console.log("Quantity:", item.quantity); // แสดงค่า quantity
+      console.log("Price:", item.price); // แสดงค่า price
+      console.log("Total Price:", item.totalprice); // แสดงค่า totalprice
 
-// บันทึกข้อมูลในตาราง orderlist
-const orderlistQuery = `
-  INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      // บันทึกข้อมูลในตาราง orderlist
+      const orderlistQuery = `
+  INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
-await db.promise().query(orderlistQuery, [
-  countnumber,
-  orderID,
-  orderlist_stock_ID,
-  item.stockname,
-  item.quantity,
-  unit,  // บันทึก unit ที่ไม่เป็น NULL
-  item.price,
-  item.totalprice,
-]);
+      await db.promise().query(orderlistQuery, [
+        countnumber,
+        orderID,
+        orderlist_stock_ID,
+        item.stockname,
+        item.quantity,
+        unit, // บันทึก unit ที่ไม่เป็น NULL
+        item.price,
+        item.totalprice,
+        "SOD000007"
+      ]);
 
-countnumber++;
-
+      countnumber++;
     }
 
     res.status(201).json({
@@ -157,33 +150,33 @@ countnumber++;
   }
 };
 
-
-
-
-
-
 // ฟังก์ชัน GenerateAutoID ที่จะสร้าง AutoID ใหม่
 
 const GenerateAutoID = async (table_name) => {
   try {
     // กำหนด prefix วันที่เป็น ddmmyy
-    const todayPrefix = new Date().toLocaleDateString('en-GB').replace(/\//g, '').slice(0, 6);
+    const todayPrefix = new Date()
+      .toLocaleDateString("en-GB")
+      .replace(/\//g, "")
+      .slice(0, 6);
 
     // ดึงค่า max_id ล่าสุดจากตาราง maxid ที่ตรงกับ table_name
-    const [lastIdResult] = await db.promise().query(
-      'SELECT max_id FROM maxid WHERE max_table = ? ORDER BY max_id DESC LIMIT 1',
-      [table_name]
-    );
+    const [lastIdResult] = await db
+      .promise()
+      .query(
+        "SELECT max_id FROM maxid WHERE max_table = ? ORDER BY max_id DESC LIMIT 1",
+        [table_name]
+      );
 
-    let nextNumber = '001'; // เริ่มต้นที่ 001
+    let nextNumber = "001"; // เริ่มต้นที่ 001
     if (lastIdResult.length > 0) {
       const lastId = lastIdResult[0].max_id;
-      
+
       // ตรวจสอบว่า last_id เป็นของวันเดียวกันหรือไม่
       if (lastId.startsWith(todayPrefix)) {
         // ถ้าใช่ให้เพิ่มหมายเลขถัดไป
         const lastNumber = parseInt(lastId.slice(6), 10);
-        nextNumber = (lastNumber + 1).toString().padStart(3, '0');
+        nextNumber = (lastNumber + 1).toString().padStart(3, "0");
       }
     }
 
@@ -191,7 +184,7 @@ const GenerateAutoID = async (table_name) => {
     const newId = todayPrefix + nextNumber;
     return newId;
   } catch (err) {
-    console.error('Error generating AutoID:', err);
+    console.error("Error generating AutoID:", err);
     throw err;
   }
 };
@@ -272,127 +265,202 @@ const GenerateAutoID = async (table_name) => {
 //   }
 // };
 
-
 const generateInvoicePDF = async (order, res) => {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
+
   // กำหนดให้ PDF ส่งกลับไปยัง response
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename=invoice.pdf');
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
 
   doc.pipe(res); // ส่งข้อมูล PDF ไปที่ Response
 
   // โหลดฟอนต์ที่รองรับภาษาไทย
-  doc.registerFont('th-sarabun', './fonts/THSarabunNew.ttf'); // ใช้ฟอนต์ที่รองรับไทย
+  doc.registerFont("th-sarabun", "./fonts/THSarabunNew.ttf"); // ใช้ฟอนต์ที่รองรับไทย
 
   // ใส่ข้อความ "ใบสั่งซื้อ" ด้านบน
-  doc.font('th-sarabun').fontSize(28).fillColor('#1d3557').text("ใบสั่งซื้อ", { align: "center" });
+  doc
+    .font("th-sarabun")
+    .fontSize(28)
+    .fillColor("#1d3557")
+    .text("ใบสั่งซื้อ", { align: "center" });
   doc.moveDown(0.5);
 
   // ข้อมูลบริษัท
-  doc.font('th-sarabun').fontSize(12).fillColor('#333').text("บริษัท: ", { align: "left" });
+  doc
+    .font("th-sarabun")
+    .fontSize(12)
+    .fillColor("#333")
+    .text("บริษัท: ", { align: "left" });
   doc.text("ที่อยู่: ", { align: "left" });
   doc.text("โทรศัพท์: ", { align: "left" });
   doc.text("อีเมล: ", { align: "left" });
   doc.text("เว็บไซต์: ", { align: "left" });
 
-  
-
   doc.moveDown(1);
 
   // ข้อมูลใบสั่งซื้อ
-  doc.font('th-sarabun').fontSize(12).fillColor('#333').text(`เลขที่ใบสั่งซื้อ: ${order.order_ID}`, { align: "left" });
+  doc
+    .font("th-sarabun")
+    .fontSize(12)
+    .fillColor("#333")
+    .text(`เลขที่ใบสั่งซื้อ: ${order.order_ID}`, { align: "left" });
   doc.text(`วันที่: ${order.date}`, { align: "left" });
   doc.text(`สถานะ: ${order.status}`, { align: "left" });
 
   doc.moveDown(1);
 
   // เส้นขอบ
-  doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#e1e1e1').lineWidth(1).stroke(); // เส้นขอบด้านบนของรายการสินค้า
+  doc
+    .moveTo(50, doc.y)
+    .lineTo(550, doc.y)
+    .strokeColor("#e1e1e1")
+    .lineWidth(1)
+    .stroke(); // เส้นขอบด้านบนของรายการสินค้า
 
-// รายการสินค้า
-doc.font('th-sarabun').fontSize(14).fillColor('#1d3557').text("รายการสินค้า:", { align: "left", underline: true });
-doc.moveDown(0.5);
+  // รายการสินค้า
+  doc
+    .font("th-sarabun")
+    .fontSize(14)
+    .fillColor("#1d3557")
+    .text("รายการสินค้า:", { align: "left", underline: true });
+  doc.moveDown(0.5);
 
-// สร้างหัวตาราง
-const tableTop = doc.y;
-const rowHeight = 20;
-const columnWidths = [50, 100, 180, 70, 100]; // กำหนดความกว้างของแต่ละคอลัมน์
-const columns = ['#', 'สินค้า', 'ราคา', 'จำนวน', 'รวม'];
+  // สร้างหัวตาราง
+  const tableTop = doc.y;
+  const rowHeight = 20;
+  const columnWidths = [50, 100, 180, 70, 100]; // กำหนดความกว้างของแต่ละคอลัมน์
+  const columns = ["#", "สินค้า", "ราคา", "จำนวน", "รวม"];
 
-let currentY = tableTop;
+  let currentY = tableTop;
 
-// วาดเส้นหัวตาราง
-columns.forEach((col, idx) => {
-  doc.font('th-sarabun').fontSize(12).fillColor('#333').text(col, columnWidths[idx] * idx + 50, currentY);
-});
+  // วาดเส้นหัวตาราง
+  columns.forEach((col, idx) => {
+    doc
+      .font("th-sarabun")
+      .fontSize(12)
+      .fillColor("#333")
+      .text(col, columnWidths[idx] * idx + 50, currentY);
+  });
 
-// วาดเส้นขอบหัวตาราง
-doc.moveTo(50, currentY + rowHeight).lineTo(550, currentY + rowHeight).strokeColor('#e1e1e1').lineWidth(1).stroke();
+  // วาดเส้นขอบหัวตาราง
+  doc
+    .moveTo(50, currentY + rowHeight)
+    .lineTo(550, currentY + rowHeight)
+    .strokeColor("#e1e1e1")
+    .lineWidth(1)
+    .stroke();
 
-// วาดเส้นและรายการสินค้า
-order.items.forEach((item, index) => {
-  currentY += rowHeight;
+  // วาดเส้นและรายการสินค้า
+  order.items.forEach((item, index) => {
+    currentY += rowHeight;
 
-  // วาดข้อมูลในแต่ละแถว
-  doc.font('th-sarabun').fontSize(12).fillColor('#333').text(index + 1, 50, currentY);
-  doc.text(item.stockname, 100 + columnWidths[0], currentY);
-  doc.text(`${item.quantity} ${item.unit}`, 110 + columnWidths[0] + columnWidths[1], currentY);
-  doc.text(item.price, 80 + columnWidths[0] + columnWidths[1] + columnWidths[2], currentY);
-  doc.text(item.totalprice, 60 + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], currentY);
+    // วาดข้อมูลในแต่ละแถว
+    doc
+      .font("th-sarabun")
+      .fontSize(12)
+      .fillColor("#333")
+      .text(index + 1, 50, currentY);
+    doc.text(item.stockname, 100 + columnWidths[0], currentY);
+    doc.text(
+      `${item.quantity} ${item.unit}`,
+      110 + columnWidths[0] + columnWidths[1],
+      currentY
+    );
+    doc.text(
+      item.price,
+      80 + columnWidths[0] + columnWidths[1] + columnWidths[2],
+      currentY
+    );
+    doc.text(
+      item.totalprice,
+      60 +
+        columnWidths[0] +
+        columnWidths[1] +
+        columnWidths[2] +
+        columnWidths[3],
+      currentY
+    );
 
-  // วาดเส้นขอบรายการสินค้า
-  if (index !== order.items.length - 1) {
-    doc.moveTo(50, currentY + rowHeight).lineTo(550, currentY + rowHeight).strokeColor('#e1e1e1').lineWidth(1).stroke();
-  }
-});
+    // วาดเส้นขอบรายการสินค้า
+    if (index !== order.items.length - 1) {
+      doc
+        .moveTo(50, currentY + rowHeight)
+        .lineTo(550, currentY + rowHeight)
+        .strokeColor("#e1e1e1")
+        .lineWidth(1)
+        .stroke();
+    }
+  });
 
-// วาดเส้นขอบล่างสุด
-doc.moveTo(50, currentY + rowHeight).lineTo(550, currentY + rowHeight).strokeColor('#e1e1e1').lineWidth(1).stroke();
+  // วาดเส้นขอบล่างสุด
+  doc
+    .moveTo(50, currentY + rowHeight)
+    .lineTo(550, currentY + rowHeight)
+    .strokeColor("#e1e1e1")
+    .lineWidth(1)
+    .stroke();
 
   doc.moveDown();
 
   // เส้นขอบ
-  doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#e1e1e1').lineWidth(1).stroke(); // เส้นขอบด้านล่างของรายการสินค้า
+  doc
+    .moveTo(50, doc.y)
+    .lineTo(550, doc.y)
+    .strokeColor("#e1e1e1")
+    .lineWidth(1)
+    .stroke(); // เส้นขอบด้านล่างของรายการสินค้า
 
   // สรุปยอดรวม
-  doc.font('th-sarabun').fontSize(14).fillColor('#1d3557').text(`ราคารวม: ${order.total} บาท`, { align: "left", bold: true });
+  doc
+    .font("th-sarabun")
+    .fontSize(14)
+    .fillColor("#1d3557")
+    .text(`ราคารวม: ${order.total} บาท`, { align: "left", bold: true });
   doc.moveDown(0.5);
 
   // ข้อมูลการชำระเงิน
   // doc.text(`ยอดที่ต้องชำระ: ${order.total} บาท`, { align: "left", bold: true });
   doc.moveDown(1);
 
-
-  const approvedBy = order.approvedBy ? order.approvedBy : "......................";
-  const approvedDate = order.approve_date ? order.approve_date : "......................";
+  const approvedBy = order.approvedBy
+    ? order.approvedBy
+    : "......................";
+  const approvedDate = order.approve_date
+    ? order.approve_date
+    : "......................";
   // โลโก้และข้อมูลวันและผู้อนุมัติ (ด้านล่าง)
   doc.moveDown(2);
-  doc.text(`ผู้จัดทำ: ${order.fullname}`, { align: 'right' });
+  doc.text(`ผู้จัดทำ: ${order.fullname}`, { align: "right" });
   doc.moveDown(0);
-  doc.text(`วันที่: ${order.date}`,  { align: 'right' });
+  doc.text(`วันที่: ${order.date}`, { align: "right" });
 
   doc.moveDown(1);
-  doc.text(`ผู้อนุมัติ: ${approvedBy}`, { align: 'right' });
+  doc.text(`ผู้อนุมัติ: ${approvedBy}`, { align: "right" });
   doc.moveDown(0);
-  doc.text(`สถานะ: ${order.status}`,  { align: 'right' });
+  doc.text(`สถานะ: ${order.status}`, { align: "right" });
   doc.moveDown(0);
-  doc.text(`วันที่: ${approvedDate}`,  { align: 'right' });
-
+  doc.text(`วันที่: ${approvedDate}`, { align: "right" });
 
   // ปิดเอกสาร
   doc.end();
 };
 
-
-
-
 const getPendingOrders = async (req, res) => {
   const { limit, offset, search } = req.query;
 
   // สร้างเงื่อนไขสำหรับการค้นหาข้อมูล
-  const searchCondition = search ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)` : "";
-  const searchValue = search ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : [];
+  const searchCondition = search
+    ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)`
+    : "";
+  const searchValue = search
+    ? [
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+      ]
+    : [];
 
   try {
     const query = `
@@ -413,7 +481,9 @@ const getPendingOrders = async (req, res) => {
       LIMIT ? OFFSET ?;
     `;
 
-    const [result] = await db.promise().query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
+    const [result] = await db
+      .promise()
+      .query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
 
     if (result.length === 0) {
       return res.status(404).json({ error: "ไม่พบข้อมูลการแจ้งซ่อม" });
@@ -422,21 +492,23 @@ const getPendingOrders = async (req, res) => {
     // ฟอร์แมตวันที่ในผลลัพธ์
     const formattedResult = result.map((item) => ({
       ...item,
-      date:
-        new Date(item.date).toLocaleDateString("th-TH", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+      date: new Date(item.date).toLocaleDateString("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
     }));
 
     // ดึงข้อมูลของรายการสินค้าที่เกี่ยวข้องกับใบสั่งซื้อ
-    const orderDetails = await Promise.all(formattedResult.map(async (order) => {
-      const itemsQuery = "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
-      const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
-      order.items = items;
-      return order;
-    }));
+    const orderDetails = await Promise.all(
+      formattedResult.map(async (order) => {
+        const itemsQuery =
+          "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
+        const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
+        order.items = items;
+        return order;
+      })
+    );
 
     // ส่งผลลัพธ์กลับไปที่ frontend
     res.status(200).json(orderDetails);
@@ -499,10 +571,15 @@ const createOrderPDF = async (req, res) => {
       FROM users
       WHERE user_ID = ?;
     `;
-    const [approvedUser] = await db.promise().query(approveQuery, [order[0].approve_userID]);
-    
+    const [approvedUser] = await db
+      .promise()
+      .query(approveQuery, [order[0].approve_userID]);
+
     // ตรวจสอบว่า approvedBy เป็น null หรือไม่ ถ้าเป็น null ให้ใช้ค่า fallback
-    order[0].approvedBy = approvedUser.length > 0 ? approvedUser[0].approvedBy : "......................";
+    order[0].approvedBy =
+      approvedUser.length > 0
+        ? approvedUser[0].approvedBy
+        : "......................";
 
     // ดึงรายการสินค้า
     const itemsQuery = "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
@@ -513,19 +590,13 @@ const createOrderPDF = async (req, res) => {
 
     // สร้าง PDF ใบสั่งซื้อ
     generateInvoicePDF(order[0], res);
-
   } catch (err) {
     console.error("Error creating PDF:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการสร้าง PDF" });
   }
 };
 
-
-
 //......................
-
-
-
 
 const orderdata = async (req, res) => {
   try {
@@ -540,10 +611,10 @@ const orderdata = async (req, res) => {
     console.error("เกิดข้อผิดพลาด:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
-}
+};
 
 const listByOrder = async (req, res) => {
-  const { order_user_ID} = req.body;
+  const { order_user_ID } = req.body;
   try {
     const query = `
         `;
@@ -556,12 +627,11 @@ const listByOrder = async (req, res) => {
     console.error("เกิดข้อผิดพลาด:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
-}
-
+};
 
 const selectOrderbyID = async (req, res) => {
   try {
-    const { order_ID } = req.query; 
+    const { order_ID } = req.query;
 
     if (!order_ID) {
       return res.status(400).json({ error: "โปรดระบุ order ID" });
@@ -588,7 +658,7 @@ const selectOrderbyID = async (req, res) => {
 
     const orderDetails = {
       ...orderResult[0],
-      items: itemsResult, 
+      items: itemsResult,
     };
 
     res.status(200).json(orderDetails);
@@ -597,7 +667,6 @@ const selectOrderbyID = async (req, res) => {
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
 };
-
 
 const editOrder = async (req, res) => {
   try {
@@ -608,7 +677,9 @@ const editOrder = async (req, res) => {
       SET order_user_ID = ?, date = ?, total = ?
       WHERE order_ID = ?
     `;
-    await db.promise().query(orderQuery, [order_user_ID, date, total, order_ID]);
+    await db
+      .promise()
+      .query(orderQuery, [order_user_ID, date, total, order_ID]);
 
     const deleteItemsQuery = `
       DELETE FROM orderlist WHERE orderlist_orders_ID = ?
@@ -618,19 +689,22 @@ const editOrder = async (req, res) => {
     let countnumber = 1;
     for (const item of items) {
       const orderlistQuery = `
-        INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      await db.promise().query(orderlistQuery, [
-        countnumber,
-        order_ID,
-        item.orderlist_stock_ID,
-        item.stockname,
-        item.quantity,
-        item.unit,
-        item.price,
-        item.totalprice,
-      ]);
+      await db
+        .promise()
+        .query(orderlistQuery, [
+          countnumber,
+          order_ID,
+          item.orderlist_stock_ID,
+          item.stockname,
+          item.quantity,
+          item.unit,
+          item.price,
+          item.totalprice,
+          "SOD000007",
+        ]);
       countnumber++;
     }
 
@@ -645,8 +719,18 @@ const getPendingOrdersForApprove = async (req, res) => {
   const { limit, offset, search } = req.query;
 
   // สร้างเงื่อนไขสำหรับการค้นหาข้อมูล
-  const searchCondition = search ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)` : "";
-  const searchValue = search ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : [];
+  const searchCondition = search
+    ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)`
+    : "";
+  const searchValue = search
+    ? [
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+      ]
+    : [];
 
   try {
     const query = `
@@ -667,7 +751,9 @@ const getPendingOrdersForApprove = async (req, res) => {
       LIMIT ? OFFSET ?;
     `;
 
-    const [result] = await db.promise().query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
+    const [result] = await db
+      .promise()
+      .query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
 
     if (result.length === 0) {
       return res.status(404).json({ error: "ไม่พบข้อมูลการแจ้งซ่อม" });
@@ -676,21 +762,23 @@ const getPendingOrdersForApprove = async (req, res) => {
     // ฟอร์แมตวันที่ในผลลัพธ์
     const formattedResult = result.map((item) => ({
       ...item,
-      date:
-        new Date(item.date).toLocaleDateString("th-TH", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }) 
+      date: new Date(item.date).toLocaleDateString("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
     }));
 
     // ดึงข้อมูลของรายการสินค้าที่เกี่ยวข้องกับใบสั่งซื้อ
-    const orderDetails = await Promise.all(formattedResult.map(async (order) => {
-      const itemsQuery = "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
-      const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
-      order.items = items;
-      return order;
-    }));
+    const orderDetails = await Promise.all(
+      formattedResult.map(async (order) => {
+        const itemsQuery =
+          "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
+        const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
+        order.items = items;
+        return order;
+      })
+    );
 
     // ส่งผลลัพธ์กลับไปที่ frontend
     res.status(200).json(orderDetails);
@@ -701,7 +789,7 @@ const getPendingOrdersForApprove = async (req, res) => {
 };
 
 const approveOrder = async (req, res) => {
-  const { orderID,userId} = req.body;
+  const { orderID, userId } = req.body;
   const now = new Date();
   const approveDate = now.toISOString().slice(0, 19).replace("T", " ");
   try {
@@ -714,17 +802,17 @@ const approveOrder = async (req, res) => {
         `;
     await db
       .promise()
-      .query(updateQuery, ["SOD000003",approveDate,userId,orderID]);
+      .query(updateQuery, ["SOD000003", approveDate, userId, orderID]);
 
     res.status(201).json({ message: "เรียบร้อยแล้ว!" });
   } catch (err) {
     console.error("เกิดข้อผิดพลาด:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
-}
+};
 
 const notApproveOrder = async (req, res) => {
-  const { orderID,userId} = req.body;
+  const { orderID, userId } = req.body;
   const now = new Date();
   const approveDate = now.toISOString().slice(0, 19).replace("T", " ");
   try {
@@ -737,17 +825,17 @@ const notApproveOrder = async (req, res) => {
         `;
     await db
       .promise()
-      .query(updateQuery, ["SOD000004",approveDate,userId,orderID]);
+      .query(updateQuery, ["SOD000004", approveDate, userId, orderID]);
 
     res.status(201).json({ message: "เรียบร้อยแล้ว!" });
   } catch (err) {
     console.error("เกิดข้อผิดพลาด:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
-}
+};
 
 const setOrderWait = async (req, res) => {
-  const { orderID} = req.body;
+  const { orderID } = req.body;
   const now = new Date();
   const approveDate = now.toISOString().slice(0, 19).replace("T", " ");
   try {
@@ -756,17 +844,14 @@ const setOrderWait = async (req, res) => {
             SET  order_stat_ID  = ?
             WHERE order_ID  = ?
         `;
-    await db
-      .promise()
-      .query(updateQuery, ["SOD000005",orderID]);
+    await db.promise().query(updateQuery, ["SOD000005", orderID]);
 
     res.status(201).json({ message: "เรียบร้อยแล้ว!" });
   } catch (err) {
     console.error("เกิดข้อผิดพลาด:", err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
-}
-
+};
 
 // API function to fetch stock details based on Req_ID
 const selectOrderByReq_ID = async (req, res) => {
@@ -791,7 +876,7 @@ const selectOrderByReq_ID = async (req, res) => {
       return res.status(404).json({ error: "ไม่พบข้อมูลรายการสินค้า" });
     }
 
-    const stockIDs = reqlistResult.map(item => item.reqlist_stock_ID);
+    const stockIDs = reqlistResult.map((item) => item.reqlist_stock_ID);
     const stockQuery = `
       SELECT * FROM stock
       WHERE ID IN (?)
@@ -804,7 +889,9 @@ const selectOrderByReq_ID = async (req, res) => {
 
     // Merging stockResult and reqlistResult into items
     const items = reqlistResult.map((reqlistItem) => {
-      const stockItem = stockResult.find(item => item.ID === reqlistItem.reqlist_stock_ID);
+      const stockItem = stockResult.find(
+        (item) => item.ID === reqlistItem.reqlist_stock_ID
+      );
       return {
         ...reqlistItem,
         ...stockItem,
@@ -820,13 +907,22 @@ const selectOrderByReq_ID = async (req, res) => {
   }
 };
 
-
 const getOrdersForReceive = async (req, res) => {
   const { limit, offset, search } = req.query;
 
   // สร้างเงื่อนไขสำหรับการค้นหาข้อมูล
-  const searchCondition = search ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)` : "";
-  const searchValue = search ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : [];
+  const searchCondition = search
+    ? `AND (order_ID LIKE ? OR order_user_ID LIKE ? OR date LIKE ? OR CONCAT(users.user_Fname, ' ', users.user_Lname) LIKE ? OR staorder.StaOrder_Name LIKE ?)`
+    : "";
+  const searchValue = search
+    ? [
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+      ]
+    : [];
 
   try {
     const query = `
@@ -845,7 +941,9 @@ const getOrdersForReceive = async (req, res) => {
       LIMIT ? OFFSET ?;
     `;
 
-    const [result] = await db.promise().query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
+    const [result] = await db
+      .promise()
+      .query(query, [...searchValue, parseInt(limit), parseInt(offset)]);
 
     if (result.length === 0) {
       return res.status(404).json({ error: "ไม่พบข้อมูลการแจ้งซ่อม" });
@@ -854,21 +952,23 @@ const getOrdersForReceive = async (req, res) => {
     // ฟอร์แมตวันที่ในผลลัพธ์
     const formattedResult = result.map((item) => ({
       ...item,
-      date:
-        new Date(item.date).toLocaleDateString("th-TH", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+      date: new Date(item.date).toLocaleDateString("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
     }));
 
     // ดึงข้อมูลของรายการสินค้าที่เกี่ยวข้องกับใบสั่งซื้อ
-    const orderDetails = await Promise.all(formattedResult.map(async (order) => {
-      const itemsQuery = "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
-      const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
-      order.items = items;
-      return order;
-    }));
+    const orderDetails = await Promise.all(
+      formattedResult.map(async (order) => {
+        const itemsQuery =
+          "SELECT * FROM orderlist WHERE orderlist_orders_ID = ?";
+        const [items] = await db.promise().query(itemsQuery, [order.order_ID]);
+        order.items = items;
+        return order;
+      })
+    );
 
     // ส่งผลลัพธ์กลับไปที่ frontend
     res.status(200).json(orderDetails);
@@ -877,6 +977,44 @@ const getOrdersForReceive = async (req, res) => {
     res.status(500).json({ error: "Error fetching orders" });
   }
 };
+const getOrdersForSelectForReceive = async (req, res) => {
+  try {
+    const OrderID = req.query.OrderID;  // Access OrderID correctly from req.query
+
+    if (!OrderID) {
+      return res.status(400).json({ error: "โปรดระบุ Order_ID" });
+    }
+
+    const query = `
+    SELECT 
+      number,
+      orderlist_orders_ID,
+      orderlist_stock_ID,
+      stockname,
+      quantity,
+      unit,
+      price,
+      totalprice,
+      status AS statusID,
+      staorder.StaOrder_Name AS statusName
+    FROM orderlist
+    INNER JOIN staorder on staorder.StaOrder_ID = orderlist.status
+    WHERE orderlist.orderlist_orders_ID = ?;
+    `;
+
+    const [result] = await db.promise().query(query, [OrderID]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "ไม่พบข้อมูลการแจ้งซ่อม" });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("เกิดข้อผิดพลาด:", err);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
+  }
+};
+
 
 module.exports = {
   createOrder,
@@ -891,4 +1029,6 @@ module.exports = {
   setOrderWait,
   selectOrderByReq_ID,
   getOrdersForReceive,
+  getOrdersForSelectForReceive,
+  
 };

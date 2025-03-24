@@ -188,6 +188,7 @@ const {
   setOrderWait,
   selectOrderByReq_ID,
   getOrdersForReceive,
+  getOrdersForSelectForReceive,
 } = require("../controllers/orderControler");
 
 // const {
@@ -421,6 +422,7 @@ router.put("/notApproveOrder", authenticateToken, notApproveOrder);
 router.put("/setOrderWait", authenticateToken, setOrderWait);
 router.get("/selectOrderByReq_ID", authenticateToken, selectOrderByReq_ID);
 router.get("/getOrdersForReceive", authenticateToken, getOrdersForReceive);
+router.get("/getOrdersForSelectForReceive", authenticateToken, getOrdersForSelectForReceive);
 
 
 //============== การเพิ่มวันลาเเละวันหยุด ======================

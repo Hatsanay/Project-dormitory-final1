@@ -1,0 +1,55 @@
+{
+  "name": "@coreui/coreui-free-vue-admin-template",
+  "version": "5.1.0",
+  "description": "CoreUI Free Vue Admin Template",
+  "bugs": {
+    "url": "https://github.com/coreui/coreui-free-vue-admin-template/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:coreui/coreui-free-vue-admin-template.git"
+  },
+  "license": "MIT",
+  "author": "The CoreUI Team (https://github.com/orgs/coreui/people)",
+  "scripts": {
+    "dev": "vite --force",
+    "build": "vite build",
+    "lint": "eslint \"src/**/*.{js,vue}\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@coreui/chartjs": "^4.0.0",
+    "@coreui/coreui": "^5.0.2",
+    "@coreui/icons": "^3.0.1",
+    "@coreui/icons-vue": "2.0.0",
+    "@coreui/utils": "^2.0.2",
+    "@coreui/vue": "^5.0.0-rc.3",
+    "@coreui/vue-chartjs": "^3.0.0",
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@fullcalendar/vue3": "^6.1.15",
+    "@popperjs/core": "^2.11.8",
+    "@vuepic/vue-datepicker": "^9.0.2",
+    "axios": "^1.7.4",
+    "chart.js": "^4.4.3",
+    "font-awesome": "^4.7.0",
+    "pinia": "^2.1.7",
+    "simplebar-vue": "^2.3.5",
+    "sweetalert2": "^11.14.3",
+    "vue": "^3.4.28",
+    "vue-easy-lightbox": "^1.19.0",
+    "vue-good-table": "^2.21.11",
+    "vue-router": "^4.3.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.5",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.26.0",
+    "postcss": "^8.4.38",
+    "sass": "^1.77.5",
+    "vite": "^5.3.1"
+  }
+}

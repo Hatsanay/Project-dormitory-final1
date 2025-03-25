@@ -464,7 +464,7 @@ const getPendingOrders = async (req, res) => {
       FROM orders
       INNER JOIN users on users.user_ID = orders.order_user_ID
       INNER JOIN staorder on staorder.StaOrder_ID = orders.order_stat_ID
-      WHERE order_stat_ID IN ('SOD000002','SOD000003','SOD000005','SOD000004') ${searchCondition}
+      WHERE order_stat_ID IN ('SOD000002','SOD000003','SOD000005','SOD000004','SOD000006') ${searchCondition}
       ORDER BY 
         CASE 
           WHEN orders.order_stat_ID = 'SOD000002' THEN 1 
@@ -752,7 +752,7 @@ const getPendingOrdersForApprove = async (req, res) => {
       FROM orders
       INNER JOIN users on users.user_ID = orders.order_user_ID
       INNER JOIN staorder on staorder.StaOrder_ID = orders.order_stat_ID
-      WHERE order_stat_ID IN ('SOD000002','SOD000003','SOD000005','SOD000004') ${searchCondition}
+      WHERE order_stat_ID IN ('SOD000002','SOD000003','SOD000005','SOD000004','SOD000006') ${searchCondition}
       ORDER BY 
         CASE 
           WHEN orders.order_stat_ID = 'SOD000002' THEN 1 
@@ -1011,6 +1011,7 @@ const getOrdersForSelectForReceive = async (req, res) => {
       price,
       totalprice,
       status AS statusID,
+      orderlist_type_stock,
       staorder.StaOrder_Name AS statusName
     FROM orderlist
     INNER JOIN staorder on staorder.StaOrder_ID = orderlist.status
@@ -1031,6 +1032,168 @@ const getOrdersForSelectForReceive = async (req, res) => {
 };
 
 
+const saveReceiveStock = async (req, res) => {
+  const { selectedOrders } = req.body;
+
+  try {
+    for (const selected of selectedOrders) {
+      if (selected.orderlist_stock_ID) {
+        // กรณีมี orderlist_stock_ID ให้เพิ่มจำนวนใน stock และอัปเดตสถานะใน orderlist
+        await updateStockAndOrderList(selected);
+      } else {
+        // กรณีไม่มี orderlist_stock_ID สร้างวัสดุใหม่
+        await createNewStockAndOrderList(selected);
+      }
+    }
+
+    res.status(200).json({ message: "บันทึกการรับวัสดุสำเร็จ" });
+  } catch (error) {
+    console.error("Error in saveReceiveStock:", error);
+    res.status(500).json({ error: "ไม่สามารถบันทึกข้อมูลได้" });
+  }
+};
+
+// ฟังก์ชันช่วยเหลือในการอัปเดตและสร้างวัสดุใหม่
+const updateStockAndOrderList = async (selected) => {
+  // เพิ่มจำนวนวัสดุในตาราง stock
+  const updateStockQuery = `
+    UPDATE stock 
+    SET quantity = quantity + ? 
+    WHERE ID = ?;
+  `;
+  await db.promise().query(updateStockQuery, [selected.quantity, selected.orderlist_stock_ID]);
+
+  // อัปเดตสถานะในตาราง orderlist
+  const updateOrderListQuery = `
+    UPDATE orderlist 
+    SET status = 'SOD000006' 
+    WHERE orderlist_stock_ID = ? AND orderlist_orders_ID =?;
+  `;
+  await db.promise().query(updateOrderListQuery, [selected.orderlist_stock_ID,selected.orderlist_orders_ID]);
+};
+
+const createNewStockAndOrderList = async (selected) => {
+  // เช็คว่ามี unit และ type_stock อยู่ในฐานข้อมูลหรือไม่
+  let unitID = await checkUnit(selected.unit);
+  if (!unitID) {
+    unitID = await createUnit(selected.unit);
+  }
+  console.log(selected.orderlist_type_stock);
+
+  let typeStockID = await checkTypeStock(selected.orderlist_type_stock);
+  if (!typeStockID) {
+    typeStockID = await createTypeStock(selected.orderlist_type_stock);
+  }
+
+  const newStockID = await generateNewStockID();
+  const insertStockQuery = `
+    INSERT INTO stock (ID, name, quantity, stock_unit_ID, stock_type_stock_ID, stock_statID)
+    VALUES (?, ?, ?, ?, ?, 'SUS000001');
+  `;
+  await db.promise().query(insertStockQuery, [newStockID, selected.stockname, selected.quantity, unitID, typeStockID]);
+
+  const UpdateOrderListQuery2 = `
+    UPDATE orderlist 
+    SET status = 'SOD000006' 
+    WHERE number = ? AND orderlist_orders_ID =?;
+  `;
+  await db.promise().query(UpdateOrderListQuery2, [selected.number,  selected.orderlist_orders_ID]);
+};
+
+// ฟังก์ชันช่วยเหลือในการตรวจสอบและสร้างข้อมูล unit และ type_stock
+const checkUnit = async (unitName) => {
+  const query = 'SELECT ID FROM unit WHERE name = ?';
+  const [result] = await db.promise().query(query, [unitName]);
+  return result.length > 0 ? result[0].ID : null;
+};
+
+const createUnit = async (unitName) => {
+  const newUnitID = await generateNewUnitID();
+  const query = 'INSERT INTO unit (ID, name, status) VALUES (?, ?, "SUS000001")';
+  await db.promise().query(query, [newUnitID, unitName]);
+  return newUnitID;
+};
+
+const checkTypeStock = async (typeStockName) => {
+  const query = 'SELECT ID FROM type_stock WHERE name = ?';
+  const [result] = await db.promise().query(query, [typeStockName]);
+  return result.length > 0 ? result[0].ID : null;
+};
+
+const createTypeStock = async (typeStockName) => {
+  const newTypeStockID = await generateNewTypeStockID();
+  const query = 'INSERT INTO type_stock (ID, name, status) VALUES (?, ?, "SUS000001")';
+  await db.promise().query(query, [newTypeStockID, typeStockName]);
+  return newTypeStockID;
+};
+
+const generateNewStockID = async () => {
+  const query = 'SELECT MAX(CAST(SUBSTRING(ID, 4) AS UNSIGNED)) AS maxID FROM stock';  // แก้ไข: เอาเลขหลัง STK
+  const [result] = await db.promise().query(query);
+  const maxID = result[0].maxID || 0;
+  return `STK${(maxID + 1).toString().padStart(6, '0')}`; // เพิ่มหมายเลขตามลำดับ
+};
+
+const generateNewUnitID = async () => {
+  const query = 'SELECT MAX(CAST(SUBSTRING(ID, 4) AS UNSIGNED)) AS maxID FROM unit';  // แก้ไข: เอาเลขหลัง UNT
+  const [result] = await db.promise().query(query);
+  const maxID = result[0].maxID || 0;
+  return `UNT${(maxID + 1).toString().padStart(6, '0')}`; // เพิ่มหมายเลขตามลำดับ
+};
+
+
+const generateNewTypeStockID = async () => {
+  const query = 'SELECT MAX(CAST(SUBSTRING(ID, 4) AS UNSIGNED)) AS maxID FROM type_stock';
+  const [result] = await db.promise().query(query);
+  const maxID = result[0].maxID || 0;
+  return `TSK${(maxID + 1).toString().padStart(6, '0')}`;
+};
+
+const countForSuccess = async (req, res) => {
+  try {
+    const order_ID = req.query.id;
+    if (!order_ID) {
+      return res.status(400).json({ error: "โปรดระบุ id" });
+    }
+
+    const query = `
+      SELECT 
+        COUNT(*) AS cOrder
+      FROM orderlist
+      WHERE orderlist_orders_ID = ? AND status = 'SOD000007'
+    `;
+    const [result] = await db.promise().query(query, [order_ID]);
+
+    if (result[0].cOrder === 0) {
+      return res.status(200).json({ cOrder: 0 }); // ไม่มีรายการที่ค้าง
+    }
+
+    res.status(200).json({ cOrder: result[0].cOrder }); // ส่งจำนวนรายการที่ค้าง
+  } catch (err) {
+    console.error("เกิดข้อผิดพลาด:", err);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
+  }
+};
+
+const updateOrderForSuccess = async (req, res) => {
+  const { orderID } = req.query;
+  try {
+    const updateQuery = `
+      UPDATE orders
+      SET order_stat_ID = ?
+      WHERE order_ID = ?;
+    `;
+    await db.promise().query(updateQuery, ["SOD000006", orderID]);
+
+    res.status(200).json({ message: "เรียบร้อยแล้ว!" });
+  } catch (err) {
+    console.error("เกิดข้อผิดพลาด:", err);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
+  }
+};
+
+
+
 module.exports = {
   createOrder,
   getPendingOrders,
@@ -1045,5 +1208,7 @@ module.exports = {
   selectOrderByReq_ID,
   getOrdersForReceive,
   getOrdersForSelectForReceive,
-  
+  saveReceiveStock,
+  countForSuccess,
+  updateOrderForSuccess,
 };

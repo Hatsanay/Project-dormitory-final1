@@ -189,6 +189,9 @@ const {
   selectOrderByReq_ID,
   getOrdersForReceive,
   getOrdersForSelectForReceive,
+  saveReceiveStock,
+  countForSuccess,
+  updateOrderForSuccess,
 } = require("../controllers/orderControler");
 
 // const {
@@ -423,6 +426,10 @@ router.put("/setOrderWait", authenticateToken, setOrderWait);
 router.get("/selectOrderByReq_ID", authenticateToken, selectOrderByReq_ID);
 router.get("/getOrdersForReceive", authenticateToken, getOrdersForReceive);
 router.get("/getOrdersForSelectForReceive", authenticateToken, getOrdersForSelectForReceive);
+router.post("/saveReceiveStock", authenticateToken, saveReceiveStock);
+router.get("/countForSuccess", authenticateToken, countForSuccess);
+router.put("/updateOrderForSuccess", authenticateToken, updateOrderForSuccess);
+
 
 
 //============== การเพิ่มวันลาเเละวันหยุด ======================

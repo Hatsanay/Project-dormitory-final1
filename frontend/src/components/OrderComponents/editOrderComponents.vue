@@ -33,6 +33,12 @@
                   :key="index"
                   class="mb-3"
                 >
+                  <!-- <CFormInput
+                    v-model="item.orderlist_stock_ID"
+                    placeholder="รหัส"
+                    :readonly="!item.isCustom"
+                    required
+                  /> -->
                   <CFormInput
                     v-model="item.stockname"
                     placeholder="ชื่อสินค้า"
@@ -46,12 +52,20 @@
                     min="1"
                     required
                   />
+
                   <CFormInput v-model="item.unit" placeholder="หน่วย" required />
                   <CFormInput
                     v-model="item.price"
                     type="number"
                     placeholder="ราคาต่อหน่วย"
                     min="0"
+                  />
+                  <CFormInput
+                    v-model="item.orderlist_type_stock"
+                    :placeholder="
+                      item.orderlist_stock_ID ? 'ประเภทสินค้า' : 'กรุณากรอกประเภทสินค้า'
+                    "
+                    :readonly="item.orderlist_stock_ID ? true : false"
                     required
                   />
                   <CButton color="danger" @click="removeItem(index)"> ลบ </CButton>
@@ -78,7 +92,8 @@
               <ul class="list-unstyled">
                 <li v-for="(item, index) in order.items" :key="index" class="mb-2">
                   {{ item.stockname }} - {{ item.quantity }} {{ item.unit }} -
-                  {{ formatCurrency(item.price * item.quantity) }}
+                  {{ formatCurrency(item.price * item.quantity) }} -
+                  <span>{{ item.orderlist_type_stock || "ประเภทไม่ระบุ" }}</span>
                 </li>
               </ul>
               <hr />
@@ -177,18 +192,21 @@ export default {
             unit: selectedProduct.unitname,
             price: 0,
             orderlist_stock_ID: selectedProduct.stockid,
+            orderlist_type_stock: selectedProduct.typestockname || "ไม่ระบุ", // ใช้ "ไม่ระบุ" หากไม่มีประเภทสินค้า
             isCustom: false,
           });
         } else {
           order.value.items.push({
             stockname: selectedProductName.value,
             quantity: 1,
-            unit: "",
+            unit: "", // กรณีสินค้าสั่งทำไม่มีหน่วย
             price: 0,
             orderlist_stock_ID: null,
-            isCustom: true,
+            orderlist_type_stock: "", // ประเภทสินค้า
+            isCustom: true, // สินค้าสั่งทำ
           });
         }
+
         selectedProductName.value = "";
       }
     };
@@ -197,19 +215,20 @@ export default {
       order.value.items.push({
         stockname: "",
         quantity: 1,
-        unit: "",
+        unit: "", // กรณีสินค้าสั่งทำไม่มีหน่วย
         price: 0,
-        isCustom: true,
+        orderlist_type_stock: "ไม่ระบุ", // ให้ค่าเริ่มต้น "ไม่ระบุ"
+        isCustom: true, // สินค้าสั่งทำ
       });
     };
 
     const removeItem = (index) => {
-      order.value.items.splice(index, 1);
+      order.value.items.splice(index, 1); // ลบรายการสินค้า
     };
 
     const totalAmount = computed(() => {
       return order.value.items.reduce((total, item) => {
-        return total + item.quantity * item.price;
+        return total + item.quantity * item.price; // คำนวณตามจำนวนและราคา
       }, 0);
     });
 
@@ -236,6 +255,7 @@ export default {
             unit: item.unit,
             price: item.price,
             totalprice: item.quantity * item.price,
+            orderlist_type_stock: item.orderlist_type_stock || "ไม่ระบุ", // ให้ค่าเริ่มต้น "ไม่ระบุ"
           })),
         };
 

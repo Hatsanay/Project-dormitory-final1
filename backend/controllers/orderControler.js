@@ -59,7 +59,11 @@ const AutoIDorder = async () => {
 const createOrder = async (req, res) => {
   try {
     const { order_user_ID, date, total, items } = req.body;
-    console.log(items.unitname);
+
+    // พิมพ์ข้อมูลที่ส่งมาจาก frontend เพื่อให้ตรวจสอบ
+    console.log("Received Order Data:", req.body);
+    console.log("Items:", items);
+
     // เรียกใช้ AutoIDorder เพื่อดึง Order ID
     let orderIDResponse = await AutoIDorder();
     let orderID = orderIDResponse[0][0].AutoID;
@@ -88,7 +92,7 @@ const createOrder = async (req, res) => {
         orderID,
         order_user_ID,
         date,
-        (order_stat_ID = "SOD000002"),
+        "SOD000002", // default status
         total,
       ]);
 
@@ -97,44 +101,33 @@ const createOrder = async (req, res) => {
     let countnumber = 1;
     // บันทึกรายการสินค้าในตาราง orderlist
     for (const item of items) {
-      let orderlist_stock_ID = null;
+      let orderlist_stock_ID = item.orderlist_stock_ID || null;
 
-      // กรณีที่สินค้ามาจาก stock
-      if (item.orderlist_stock_ID && item.orderlist_stock_ID !== null) {
-        orderlist_stock_ID = item.orderlist_stock_ID; // กำหนดค่าจาก stock
-      } else if (!item.orderlist_stock_ID && item.isCustom) {
-        // ถ้าเป็นสินค้าที่กรอกเองและไม่มี stock
-        orderlist_stock_ID = null;
-      }
-
-      // ตรวจสอบว่า unit เป็น NULL หรือไม่
-      // หาก unitname เป็น NULL หรือ undefined ให้ใช้ค่าว่าง
       // ตรวจสอบว่า unit เป็น NULL หรือไม่
       const unit = item.unit && item.unit.trim() !== "" ? item.unit : ""; // ถ้า unitname เป็น null หรือว่างให้เป็น ""
 
-      console.log("Before Insert:");
-      console.log("Order List Stock ID:", orderlist_stock_ID); // แสดงค่า orderlist_stock_ID
-      console.log("Unit:", unit); // แสดงค่า unit
-      console.log("Stock Name:", item.stockname); // แสดงค่า stockname
-      console.log("Quantity:", item.quantity); // แสดงค่า quantity
-      console.log("Price:", item.price); // แสดงค่า price
-      console.log("Total Price:", item.totalprice); // แสดงค่า totalprice
+      // การใช้ค่าที่กรอกไปในฟอร์ม ถ้าผู้ใช้กรอกค่าใน orderlist_type_stock
+      const orderlist_type_stock = item.orderlist_type_stock && item.orderlist_type_stock.trim() !== "" 
+        ? item.orderlist_type_stock 
+        : ""; // ไม่กำหนดค่าเริ่มต้น เพราะผู้ใช้กรอกไปแล้ว
+
 
       // บันทึกข้อมูลในตาราง orderlist
       const orderlistQuery = `
-  INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-`;
+        INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status, orderlist_type_stock)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
       await db.promise().query(orderlistQuery, [
         countnumber,
         orderID,
         orderlist_stock_ID,
         item.stockname,
         item.quantity,
-        unit, // บันทึก unit ที่ไม่เป็น NULL
+        unit,
         item.price,
         item.totalprice,
-        "SOD000007"
+        "SOD000007",  // สถานะ
+        orderlist_type_stock, // บันทึกค่าที่กรอกไป
       ]);
 
       countnumber++;
@@ -149,6 +142,9 @@ const createOrder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
 
 // ฟังก์ชัน GenerateAutoID ที่จะสร้าง AutoID ใหม่
 
@@ -652,7 +648,20 @@ const selectOrderbyID = async (req, res) => {
     }
 
     const itemsQuery = `
-      SELECT * FROM orderlist WHERE orderlist_orders_ID = ?
+    SELECT 
+      number,
+      orderlist_orders_ID ,
+      orderlist_stock_ID ,
+      orderlist_type_stock,
+      stockname,
+      quantity,
+      unit,
+      price,
+      totalprice,
+      orderlist_type_stock,
+      status
+    FROM orderlist 
+    WHERE orderlist_orders_ID = ?
     `;
     const [itemsResult] = await db.promise().query(itemsQuery, [order_ID]);
 
@@ -672,15 +681,15 @@ const editOrder = async (req, res) => {
   try {
     const { order_ID, order_user_ID, date, total, items } = req.body;
 
+    // อัปเดตข้อมูลในตาราง orders
     const orderQuery = `
       UPDATE orders
       SET order_user_ID = ?, date = ?, total = ?
       WHERE order_ID = ?
     `;
-    await db
-      .promise()
-      .query(orderQuery, [order_user_ID, date, total, order_ID]);
+    await db.promise().query(orderQuery, [order_user_ID, date, total, order_ID]);
 
+    // ลบรายการสินค้าก่อนที่จะทำการเพิ่มใหม่
     const deleteItemsQuery = `
       DELETE FROM orderlist WHERE orderlist_orders_ID = ?
     `;
@@ -688,23 +697,24 @@ const editOrder = async (req, res) => {
 
     let countnumber = 1;
     for (const item of items) {
+      const orderlist_type_stock = item.orderlist_type_stock || "ไม่ระบุ"; // กำหนดค่าเริ่มต้นเป็น "ไม่ระบุ" ถ้าไม่มีค่า
+
       const orderlistQuery = `
-        INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO orderlist (number, orderlist_orders_ID, orderlist_stock_ID, stockname, quantity, unit, price, totalprice, status, orderlist_type_stock)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      await db
-        .promise()
-        .query(orderlistQuery, [
-          countnumber,
-          order_ID,
-          item.orderlist_stock_ID,
-          item.stockname,
-          item.quantity,
-          item.unit,
-          item.price,
-          item.totalprice,
-          "SOD000007",
-        ]);
+      await db.promise().query(orderlistQuery, [
+        countnumber,
+        order_ID,
+        item.orderlist_stock_ID,
+        item.stockname,
+        item.quantity,
+        item.unit, // หน่วยสินค้า
+        item.price,
+        item.totalprice,
+        "SOD000007",  // สถานะ
+        orderlist_type_stock, // ประเภทสินค้า
+      ]);
       countnumber++;
     }
 
@@ -714,6 +724,10 @@ const editOrder = async (req, res) => {
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดำเนินการ" });
   }
 };
+
+
+
+
 
 const getPendingOrdersForApprove = async (req, res) => {
   const { limit, offset, search } = req.query;
@@ -863,10 +877,11 @@ const selectOrderByReq_ID = async (req, res) => {
     }
 
     const query = `
-    SELECT r.reqlist_stock_ID AS reqlist_stock_ID, r.quantity - s.quantity AS remaining_quantity, u.name AS unitname, 0 AS price
+    SELECT r.reqlist_stock_ID AS reqlist_stock_ID, r.quantity - s.quantity AS remaining_quantity, u.name AS unitname, 0 AS price, type_stock.name AS orderlist_type_stock
     FROM requisition_list r
     JOIN stock s ON r.reqlist_stock_ID = s.ID
     JOIN unit u ON s.stock_unit_ID = u.ID
+    JOIN type_stock ON s.stock_type_stock_ID = type_stock.ID
     WHERE r.reqlist_requisition_ID = ?
     AND r.reqlist_stat_ID = "SOD000001"
     `;

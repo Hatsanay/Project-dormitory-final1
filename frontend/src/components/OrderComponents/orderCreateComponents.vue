@@ -29,7 +29,6 @@
               </CCol>
 
               <!-- รายการสินค้า -->
-              <!-- รายการสินค้า -->
               <CCol :md="12">
                 <CFormLabel>รายการสินค้า</CFormLabel>
                 <CInputGroup
@@ -57,6 +56,15 @@
                     placeholder="ราคาต่อหน่วย"
                     min="0"
                   />
+                  <CFormInput
+                    v-model="item.orderlist_type_stock"
+                    :placeholder="
+                      item.orderlist_stock_ID ? 'ประเภทสินค้า' : 'กรุณากรอกประเภทสินค้า'
+                    "
+                    :readonly="item.orderlist_stock_ID ? true : false"
+                    required
+                  />
+
                   <CButton color="danger" @click="removeItem(index)"> ลบ </CButton>
                 </CInputGroup>
                 <CButton color="success" @click="addItem"> เพิ่มรายการสินค้า </CButton>
@@ -83,7 +91,8 @@
               <ul class="list-unstyled">
                 <li v-for="(item, index) in order.items" :key="index" class="mb-2">
                   {{ item.name }} - {{ item.remaining_quantity }} {{ item.unitname }} -
-                  {{ formatCurrency(item.price * item.remaining_quantity) }}
+                  {{ formatCurrency(item.price * item.remaining_quantity) }} -
+                  <span>{{ item.typestockname || "ประเภทไม่ระบุ" }}</span>
                 </li>
               </ul>
               <hr />
@@ -160,10 +169,9 @@ export default {
         console.error("Error fetching user data:", error);
       }
     };
-
+    // ในฟังก์ชัน onProductChange
     const onProductChange = async () => {
       if (selectedProductName.value) {
-        // ตรวจสอบว่าเลือกสินค้าที่มีในรายการแล้วหรือยัง
         const productExists = order.value.items.some(
           (item) => item.name === selectedProductName.value
         );
@@ -175,7 +183,7 @@ export default {
             text: "กรุณาเลือกสินค้าที่แตกต่างจากรายการที่มีอยู่แล้ว",
           });
           selectedProductName.value = ""; // เคลียร์ input หลังจากแจ้งเตือน
-          return; // หยุดการทำงานหากสินค้านี้มีอยู่แล้วในรายการ
+          return;
         }
 
         const selectedProduct = stockList.value.find(
@@ -190,11 +198,13 @@ export default {
           order.value.items.push({
             name: selectedProduct.stockname,
             quantity: 1,
-            unit: selectedProduct.unitnameม,
+            unit: selectedProduct.unitname,
             price: 0,
             orderlist_stock_ID: selectedProduct.stockid,
             unitname: selectedProduct.unitname,
             remaining_quantity: remainingQuantity,
+            typestockname: selectedProduct.typestockname, // เพิ่มประเภทสินค้า
+            orderlist_type_stock: selectedProduct.typestockname, // ส่งค่าประเภทสินค้าที่กรอกไป
             isCustom: false,
           });
         } else {
@@ -204,12 +214,26 @@ export default {
             unit: "", // ถ้าเป็นสินค้า custom ไม่มี unit
             price: 0,
             orderlist_stock_ID: null,
-            isCustom: true,
+            typestockname: "", // กรณี custom จะไม่มีกำหนดประเภท
+            orderlist_type_stock: selectedProductName.value, // ส่งค่าที่กรอกไปเป็นประเภทสินค้า
+            isCustom: true, // สินค้าสั่งทำ
           });
         }
 
         selectedProductName.value = ""; // เคลียร์ input หลังจากเลือกสินค้า
       }
+    };
+
+    const addItem = () => {
+      order.value.items.push({
+        name: "",
+        quantity: 1,
+        unit: "",
+        price: 0,
+        orderlist_stock_ID: null,
+        typestockname: "", // เพิ่มประเภทสินค้าเป็นค่าว่าง
+        isCustom: true, // สามารถแก้ไขชื่อได้
+      });
     };
 
     // กรณีที่มี reqrId ส่งมาและต้องการดึงข้อมูลสินค้าจาก requisition
@@ -225,6 +249,7 @@ export default {
             // กรณีที่ item ไม่มี orderlist_stock_ID ให้ใช้ reqlist_stock_ID
             orderlist_stock_ID: item.reqlist_stock_ID ? item.reqlist_stock_ID : null,
             unitname: item.unitname || "", // ตรวจสอบหน่วยสินค้า
+            orderlist_type_stock: item.orderlist_type_stock || "", // ตรวจสอบหน่วยสินค้า
             price: 0, // ราคาคิดเป็น 0 หากไม่ได้ระบุราคา
             remaining_quantity: item.remaining_quantity || 0, // กำหนด remaining_quantity ถ้ามี
             isCustom: false, // กรณีนี้เป็นสินค้าจาก requisition list
@@ -249,17 +274,6 @@ export default {
       }
     };
 
-    const addItem = () => {
-      order.value.items.push({
-        name: "",
-        quantity: 1,
-        unit: "",
-        price: 0,
-        orderlist_stock_ID: null,
-        isCustom: true, // สามารถแก้ไขชื่อได้
-      });
-    };
-
     const removeItem = (index) => {
       order.value.items.splice(index, 1); // ลบรายการสินค้าที่เลือก
     };
@@ -277,7 +291,6 @@ export default {
         currency: "THB",
       }).format(value);
     };
-
     const handleSubmit = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -287,24 +300,35 @@ export default {
           order_stat_ID: 1,
           total: totalAmount.value,
           items: order.value.items.map((item) => {
-            let orderlist_stock_ID = item.orderlist_stock_ID;
+            // ตรวจสอบและตั้งค่า orderlist_type_stock ในกรณีที่ไม่ได้กรอก
+            const orderlist_type_stock =
+              item.orderlist_type_stock && item.orderlist_type_stock.trim() !== ""
+                ? item.orderlist_type_stock
+                : "ไม่ระบุ"; // ถ้าไม่มีค่าให้กรอกคำว่า "ไม่ระบุ"
 
-            if (item.orderlist_stock_ID === null && item.isCustom === false) {
-              orderlist_stock_ID = item.reqlist_stock_ID; // กรณีที่มาจาก requisition
+            let orderlist_stock_ID = item.orderlist_stock_ID;
+            let stockname = item.name; // เริ่มต้นด้วยชื่อที่กรอก
+
+            if (item.orderlist_stock_ID === null) {
+              // ถ้าเป็นสินค้าสั่งทำ ให้ใช้ชื่อสินค้าที่กรอกแทน
+              orderlist_stock_ID = null; // หมายความว่าสินค้าสั่งทำ
+              stockname = item.name || "ไม่ระบุ"; // ถ้าไม่มีชื่อสินค้าให้ใช้คำว่า "ไม่ระบุ"
             }
 
             return {
               orderlist_stock_ID: orderlist_stock_ID,
-              stockname: item.name,
+              stockname: stockname, // ชื่อที่กรอกสำหรับสินค้าสั่งทำ
               quantity: item.remaining_quantity,
               unit: item.unitname, // unitname ถูกส่งไปที่นี่
               price: item.price,
               totalprice: item.remaining_quantity * item.price,
+              orderlist_type_stock: orderlist_type_stock, // บันทึกประเภทสินค้าหากเป็นสินค้าสั่งทำ
             };
           }),
         };
 
-        console.log(orderData); // ตรวจสอบข้อมูลที่ส่งไปยังเซิร์ฟเวอร์
+        // ตรวจสอบข้อมูลก่อนส่ง
+        console.log(orderData);
 
         // ส่งข้อมูลไปยัง API
         const response = await axios.post("/api/auth/createOrder", orderData, {

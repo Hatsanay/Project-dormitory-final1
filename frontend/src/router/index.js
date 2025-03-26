@@ -62,6 +62,9 @@ import receiveStockView from '../views/Order/receiveStockView.vue';
 import AddHolidayView from '../views/Holiday/HolidayView.vue';
 import AddLeaveRequestView from '../views/LeaveRequest/AddLeaveRequestView.vue';
 
+
+import reportView from '../views/Report/reportView.vue';
+
 import { clearToken, hasPermission, isAuthenticated } from './auth';
 
 const routes = [
@@ -375,6 +378,13 @@ const routes = [
         component: AddHolidayView,
       },
 
+      //----------------- รายงาน -------------------------
+      {
+        path: '/reportView',
+        name: 'รายงานทั้งหมด',
+        meta: { permission: 'View_report', requiresAuth: true },
+        component: reportView,
+      },
       
       ///ตั้งค่า///
       {

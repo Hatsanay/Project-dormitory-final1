@@ -168,6 +168,21 @@ export default [
     icon: 'cilPuzzle',
     permission_index: 46,
   },
+
+   ///รายงาน///
+   {
+    component: 'CNavTitle',
+    name: 'รายงาน',
+    permission_index: 49, 
+  },
+  {
+    component: 'CNavItem',
+    name: 'รายงานทั้งหมด',
+    to: '/reportView',
+    icon: 'cil-notes',
+    permission_index: 49, 
+  },
+
   ///ตั้งค่า///
   {
     component: 'CNavTitle',

@@ -106,6 +106,13 @@ export const decodeJWTTH = (token) => {
 
       'view_receiveStock',//47
       'add_receiveStock',//48
+
+      'View_report',//49
+      'View_report1',//50
+      'View_report2',//51
+      'View_report3',//52
+      'View_report4',//53
+      'View_report5',//54
     ];
     
     const permissionsToken = getPermissions();
